@@ -6,16 +6,21 @@ export default async function handler(req, res) {
   if (!query) return res.status(400).json({ error: 'No query provided' });
 
   try {
-    const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-    const response = await fetch(url);
-    const data = await response.json();
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
+    const r1 = await fetch(url);
+    const wiki = await r1.json();
 
     let results = '';
-    if (data.AbstractText) results += data.AbstractText + '\n\n';
-    if (data.Answer) results += data.Answer + '\n\n';
-    if (data.RelatedTopics) {
-      data.RelatedTopics.slice(0, 6).forEach(t => {
-        if (t.Text) results += '• ' + t.Text + '\n';
+    if (wiki.extract) results += wiki.extract + '\n\n';
+
+    const newsUrl = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`;
+    const r2 = await fetch(newsUrl);
+    const news = await r2.json();
+
+    if (news.hits && news.hits.length > 0) {
+      results += 'Recent mentions:\n';
+      news.hits.forEach(h => {
+        if (h.title) results += '• ' + h.title + '\n';
       });
     }
 
